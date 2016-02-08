@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #imports
 import hashlib
@@ -6,11 +6,10 @@ import psutil
 import argparse
 import os
 
-#Get SHA1 hashes from command line, set as var
-parser = argparse.ArgumentParser()
-parser.add_argument("hashes", help="SHA1 hashes to compare with running processes", nargs="*")
-args = parser.parse_args()
-inhashes = args.hashes
+
+#CONSTANTS
+BLOCKLIMIT = 65536
+
 
 #Iterate over running processes and create base file list, include pids
 def get_files():
@@ -19,22 +18,21 @@ def get_files():
         try:
             base = proc.exe()
             pid = proc.pid
+            files.append([base, pid])
         except psutil.AccessDenied:
             print 'Warning: Access denied getting file path for pid %s' %(str(proc.pid))
-        else:
-            files.append([base, pid])
     return files
 
-#function to create hash
+
 def hash_file(base_file):
     hasher = hashlib.sha1()
-    blocklimit = 65536
+    #blocklimit = 65536
     try:
         with open(base_file, 'rb') as tohash:
-            content = tohash.read(blocklimit)
+            content = tohash.read(BLOCKLIMIT)
             while len(content) > 0:
                 hasher.update(content)
-                content = tohash.read(blocklimit)
+                content = tohash.read(BLOCKLIMIT)
     except IOError:
         print "Error reading file %s, probably access denied" % (base_file)
     else:
@@ -49,7 +47,7 @@ def killproc(pid):
         print "Process no longer exists"
 
 
-def shacompare():
+def shacompare(inhashes):
     files = get_files()
     for base_file in files:
         base_hash = hash_file(base_file[0])
@@ -59,7 +57,17 @@ def shacompare():
                 bad_pid = base_file[1]
                 print "Killing matched process"
                 killproc(bad_pid)
-            else:
-                pass
 
-shacompare()
+def main():
+    #Get SHA1 hashes from command line, set as var
+    parser = argparse.ArgumentParser()
+    parser.add_argument("hashes", help="SHA1 hashes to compare with running processes", nargs="*")
+    args = parser.parse_args()
+    inhashes = args.hashes
+    if inhashes:
+        shacompare(inhashes)
+    else:
+        print "Did not receive any input hashes. Run with -h for help. Exiting..."
+
+if __name__ == '__main__':
+    main()
