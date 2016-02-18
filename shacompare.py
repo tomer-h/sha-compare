@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-
+"""Receives a list of SHA1 hashes, compares to hash of
+running base image files, and kills any matched processes"""
 #imports
 import hashlib
-import psutil
 import argparse
-import os
+import psutil
 
 
 #CONSTANTS
@@ -13,6 +13,7 @@ BLOCKLIMIT = 65536
 
 #Iterate over running processes and create base file list, include pids
 def get_files():
+    """Returns a list of process ids and base files"""
     files = []
     for proc in psutil.process_iter():
         try:
@@ -25,8 +26,8 @@ def get_files():
 
 
 def hash_file(base_file):
+    """gets sha1 hash of base file, protects memory"""
     hasher = hashlib.sha1()
-    #blocklimit = 65536
     try:
         with open(base_file, 'rb') as tohash:
             content = tohash.read(BLOCKLIMIT)
@@ -40,6 +41,7 @@ def hash_file(base_file):
         return filehash
 
 def killproc(pid):
+    """kills provided pid"""
     badproc = psutil.Process(pid)
     try:
         badproc.kill()
@@ -48,6 +50,7 @@ def killproc(pid):
 
 
 def shacompare(inhashes):
+    """Compares hashes from string with provided"""
     files = get_files()
     for base_file in files:
         base_hash = hash_file(base_file[0])
@@ -59,7 +62,7 @@ def shacompare(inhashes):
                 killproc(bad_pid)
 
 def main():
-    #Get SHA1 hashes from command line, set as var
+    """Get SHA1 hashes from command line, set as var, call comparison"""
     parser = argparse.ArgumentParser()
     parser.add_argument("hashes", help="SHA1 hashes to compare with running processes", nargs="*")
     args = parser.parse_args()
